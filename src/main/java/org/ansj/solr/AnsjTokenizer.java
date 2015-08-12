@@ -1,7 +1,6 @@
 package org.ansj.solr;
 
 import java.io.IOException;
-import java.io.Reader;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -18,40 +17,41 @@ import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
+import org.apache.lucene.util.AttributeFactory;
 
-
-public class AnsjTokenizer extends Tokenizer{
+public class AnsjTokenizer extends Tokenizer {
 
 	private final static String PUNCTION = "。，！？；,!?;";
-	public  static final String SPACES = " 　\t\r\n";
+	public static final String SPACES = " 　\t\r\n";
 
 	private static Set<String> stopwords = new HashSet<String>();
 	final static String stop = "',.`-_=?\'|\"(){}[]<>*#&^$@!~:;+/《》—－，。、：；！·？“”）（【】［］●'";
-	private int analysisType ; 
+	private int analysisType;
 	private boolean removePunc;
-	//for sentences split
+
+	// for sentences split
 	private final StringBuilder buffer = new StringBuilder();
 	private int tokenStart = 0, tokenEnd = 0;
-
 
 	private CharTermAttribute termAtt;
 	private OffsetAttribute offsetAtt;
 	private TypeAttribute typeAtt;
 	private PositionIncrementAttribute positionIncrementAtt;
 	int lastOffset = 0;
-	int endPosition =0; 
+	int endPosition = 0;
 	private Iterator<Term> tokenIter;
 	private List<Term> tokenBuffer;
-	static
-	{
-		for(String c : stop.split("")){
+
+	static {
+		for (String c : stop.split("")) {
 			stopwords.add(c);
 		}
 		new ToAnalysis(new StringReader(""));
 	}
-	
-	public AnsjTokenizer(Reader input, int analysisType, boolean removePunc) {
-		super(input);
+
+	public AnsjTokenizer(AttributeFactory factory, int analysisType, boolean removePunc) {
+		super(factory);
+
 		offsetAtt = addAttribute(OffsetAttribute.class);
 		termAtt = addAttribute(CharTermAttribute.class);
 		typeAtt = addAttribute(TypeAttribute.class);
@@ -62,27 +62,27 @@ public class AnsjTokenizer extends Tokenizer{
 
 	@Override
 	public boolean incrementToken() throws IOException {
-		if (tokenIter == null || !tokenIter.hasNext()){
+		if (tokenIter == null || !tokenIter.hasNext()) {
 			String currentSentence = checkSentences();
-			if (currentSentence!= null){
+			if (currentSentence != null) {
 				tokenBuffer = new ArrayList<Term>();
-				if (analysisType == 1){
+				if (analysisType == 1) {
 					Analysis udf = new ToAnalysis(new StringReader(currentSentence));
-					Term term = null ;
-					while((term=udf.next())!=null){
+					Term term = null;
+					while ((term = udf.next()) != null) {
 						if (removePunc && stopwords.contains(term.getName()))
 							continue;
 						tokenBuffer.add(term);
 					}
-				}else {
-					for(Term term :  IndexAnalysis.parse(currentSentence)){
+				} else {
+					for (Term term : IndexAnalysis.parse(currentSentence)) {
 						if (removePunc && stopwords.contains(term.getName()))
 							continue;
 						tokenBuffer.add(term);
 					}
 				}
 				tokenIter = tokenBuffer.iterator();
-				if (!tokenIter.hasNext()){
+				if (!tokenIter.hasNext()) {
 					return false;
 				}
 			} else {
@@ -90,37 +90,35 @@ public class AnsjTokenizer extends Tokenizer{
 			}
 		}
 		clearAttributes();
-		
+
 		Term term = tokenIter.next();
-		if (removePunc){
-			while(stopwords.contains(term.getName())){
-				if (!tokenIter.hasNext()){
-				}else{
+		if (removePunc) {
+			while (stopwords.contains(term.getName())) {
+				if (!tokenIter.hasNext()) {
+				} else {
 					term = tokenIter.next();
 				}
 			}
 		}
 		termAtt.append(term.getName());
 		termAtt.setLength(term.getName().length());
-		
+
 		int currentStart = tokenStart + term.getOffe();
-		int currentEnd = tokenStart + term.getToValue();
-		offsetAtt.setOffset(currentStart,currentEnd);
+		int currentEnd = tokenStart + term.toValue();
+		offsetAtt.setOffset(currentStart, currentEnd);
 		typeAtt.setType("word");
 
-//		int pi = currentStart - lastOffset;
-//		if(term.getOffe()  <= 0) {
-//			pi = 1;
-//		}
-//		positionIncrementAtt.setPositionIncrement( pi );
+		// int pi = currentStart - lastOffset;
+		// if(term.getOffe() <= 0) {
+		// pi = 1;
+		// }
+		// positionIncrementAtt.setPositionIncrement( pi );
 		lastOffset = currentStart;
 		endPosition = currentEnd;
 		return true;
 	}
 
-
-
-	private String checkSentences() throws IOException{
+	private String checkSentences() throws IOException {
 		buffer.setLength(0);
 		int ci;
 		char ch, pch;
@@ -150,18 +148,17 @@ public class AnsjTokenizer extends Tokenizer{
 				ci = input.read();
 				ch = (char) ci;
 				// Two spaces, such as CR, LF
-				if (SPACES.indexOf(ch) != -1
-						&& SPACES.indexOf(pch) != -1) {
+				if (SPACES.indexOf(ch) != -1 && SPACES.indexOf(pch) != -1) {
 					// buffer.append(ch);
 					tokenEnd++;
 					break;
 				}
 			}
 		}
-		if (buffer.length() == 0){
-			//sentences finished~	
-			return null; 
-		}else {
+		if (buffer.length() == 0) {
+			// sentences finished~
+			return null;
+		} else {
 			return buffer.toString();
 		}
 
@@ -172,7 +169,7 @@ public class AnsjTokenizer extends Tokenizer{
 		super.reset();
 		tokenStart = tokenEnd = 0;
 	}
-	
+
 	public final void end() {
 		// set final offset
 		int finalOffset = correctOffset(this.endPosition);
