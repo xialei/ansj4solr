@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -43,13 +44,37 @@ public class AnsjTokenizerFactory extends TokenizerFactory implements ResourceLo
 	public void update() throws IOException {
 		Properties p = needUpdate();
 		if (p != null) {
-			List<String> dicPaths = getFileNames(p.getProperty("files"));
-			for (String path : dicPaths) {
-				if ((path != null && !path.isEmpty())) {
-					InputStream is = loader.openResource(path);
+			String storageType = p.getProperty("dict.storage");
+			if ("mongo".equalsIgnoreCase(storageType)) {
+				String hoststr = p.getProperty("dict.mongo");
+				String[] hostParts = hoststr.split("/");
+				String hostport = hostParts[0];
+				String db = hostParts[1];
+				String[] parts = hostport.split(":");
+				String host = parts[0];
+				int port = 27017;
+				if (parts.length > 1) {
+					port = Integer.parseInt(parts[1]);
+				}
+				String table = p.getProperty("dict.table");
+				String fields = p.getProperty("dict.fields");
+				String[] farray = fields.split(",");
+				Map<String, String> fm = new HashMap<String, String>();
+				for (int i = 0; i < farray.length; i++) {
+					String[] fv = farray[i].split(":");
+					fm.put(fv[0], fv[1]);
+				}
+				new MongoAdaptor(host, port).getDictWords(db, table, fm.get("word"), fm.get("weight"));
 
-					if (is != null) {
-						addUserDefinedWords(is);
+			} else if ("file".equalsIgnoreCase(storageType)) {
+				List<String> dicPaths = getFileNames(p.getProperty("files"));
+				for (String path : dicPaths) {
+					if ((path != null && !path.isEmpty())) {
+						InputStream is = loader.openResource(path);
+
+						if (is != null) {
+							addUserDefinedWords(is);
+						}
 					}
 				}
 			}
