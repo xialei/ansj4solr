@@ -2,7 +2,6 @@ package org.ansj.solr;
 
 import org.ansj.library.DATDictionary;
 import org.ansj.library.UserDefineLibrary;
-import org.ansj.util.MyStaticValue;
 import org.bson.Document;
 
 import com.mongodb.Block;
@@ -11,14 +10,14 @@ import com.mongodb.client.MongoDatabase;
 
 public class MongoAdaptor {
 
-	private MongoClient client = null;
+	/**
+	 * avoid multi-time insert of user defined words by multi collections
+	 * concurrently
+	 */
+	public static synchronized void getDictWords(String host, int port, String dbName, String table,
+			String word, String weight) {
 
-	public MongoAdaptor(String host, int port) {
-		client = new MongoClient(host, port);
-
-	}
-
-	public void getDictWords(String dbName, String table, String word, String weight) {
+		MongoClient client = new MongoClient(host, port);
 
 		MongoDatabase db = client.getDatabase(dbName);
 
@@ -32,7 +31,8 @@ public class MongoAdaptor {
 				int freq = doc.getInteger(weight);
 
 				// 如何核心辞典存在那么就放弃
-				if (MyStaticValue.isSkipUserDefine && DATDictionary.getId(kw) > 0) {
+				// MyStaticValue.isSkipUserDefine &&
+				if (DATDictionary.getId(kw) > 0) {
 
 				} else {
 
@@ -42,6 +42,8 @@ public class MongoAdaptor {
 			}
 
 		});
+
+		client.close();
 
 	}
 

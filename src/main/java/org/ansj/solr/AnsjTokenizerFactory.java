@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Vector;
 
 import org.ansj.library.DATDictionary;
 import org.ansj.library.UserDefineLibrary;
@@ -33,6 +34,8 @@ public class AnsjTokenizerFactory extends TokenizerFactory implements ResourceLo
 	private long lastUpdateTime = -1;
 	private String conf = null;
 
+	private static Vector<String> userDefinedDict = new Vector<String>();
+
 	public AnsjTokenizerFactory(Map<String, String> args) {
 		super(args);
 		analysisType = getInt(args, "analysisType", 0);
@@ -45,6 +48,7 @@ public class AnsjTokenizerFactory extends TokenizerFactory implements ResourceLo
 		Properties p = needUpdate();
 		if (p != null) {
 			String storageType = p.getProperty("dict.storage");
+
 			if ("mongo".equalsIgnoreCase(storageType)) {
 				String hoststr = p.getProperty("dict.mongo");
 				String[] hostParts = hoststr.split("/");
@@ -64,7 +68,12 @@ public class AnsjTokenizerFactory extends TokenizerFactory implements ResourceLo
 					String[] fv = farray[i].split(":");
 					fm.put(fv[0], fv[1]);
 				}
-				new MongoAdaptor(host, port).getDictWords(db, table, fm.get("word"), fm.get("weight"));
+
+				String dictName = (db + "_" + table).toUpperCase();
+				if (!userDefinedDict.contains(dictName)) {
+					MongoAdaptor.getDictWords(host, port, db, table, fm.get("word"), fm.get("weight"));
+					userDefinedDict.add(dictName);
+				}
 
 			} else if ("file".equalsIgnoreCase(storageType)) {
 				List<String> dicPaths = getFileNames(p.getProperty("files"));
