@@ -5,9 +5,6 @@ solr的ansj分词插件，支持5以上
 
 [ansj分词](https://github.com/ansjsun/ansj_seg)是一个基于google语义模型+条件随机场模型的中文分词的java实现.。
 
-也可以执行mvn assembly:assembly 把zip里的三个包拿出来。
-
-[ik分词插件](https://github.com/lgnlgn/ik4solr4.3), 以及动态[停用词、同义词插件](https://github.com/lgnlgn/stop4solr4.x)包
 
 
 配置如下
@@ -32,7 +29,13 @@ solr的ansj分词插件，支持5以上
 conf="ansj.conf" 这个tokenizerfactory需要的配置，里面是个properties格式的配置：
 
     lastupdate=123
-    files=extDic.txt,aaa.txt
+    #file/mongo
+    dict.storage=mongo
+    files=dic/default.dic,$cwd/solr/dic/user.dic
+    dict.mongo=192.168.0.1:27017/news
+    dict.table=dict
+    #word,weight
+    dict.fields=word:word,weight:w
 
 其中lastupdate 是一个数字，只要这次比上一次大就会触发更新操作，可以用时间戳 files是用户词库文件，以**英文逗号**隔开
 
